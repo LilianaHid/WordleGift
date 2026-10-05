@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Wordle</title>
+
+    <h2> I like being....</h2>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            min-height: 100vh;
+        }
+
+        .game {
+            width: 350px;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0 0 15px 0;
+
+            font-size: 32px;
+            letter-spacing: 3px;
+        }
+
+        #message {
+            height: 30px;
+
+            margin-bottom: 10px;
+
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+
+        /* =========================
+           BOARD
+        ========================= */
+
+        #board {
+            display: flex;
+            flex-direction: column;
+
+            gap: 5px;
+
+            margin-bottom: 25px;
+        }
+
+        .row {
+            display: grid;
+
+            grid-template-columns: repeat(5, 1fr);
+
+            gap: 5px;
+        }
+
+        .tile {
+            width: 62px;
+            height: 62px;
+
+            border: 2px solid #d3d6da;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            font-size: 28px;
+            font-weight: bold;
+
+            text-transform: uppercase;
+        }
+
+
+        /* =========================
+           TILE COLORS
+        ========================= */
+
+        .correct {
+            background-color: #6aaa64;
+            border-color: #6aaa64;
+
+            color: white;
+        }
+
+        .present {
+            background-color: #c9b458;
+            border-color: #c9b458;
+
+            color: white;
+        }
+
+        .absent {
+            background-color: #787c7e;
+            border-color: #787c7e;
+
+            color: white;
+        }
+
+
+        /* =========================
+           KEYBOARD
+        ========================= */
+
+        #keyboard {
+            display: flex;
+            flex-direction: column;
+
+            gap: 6px;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+
+            gap: 5px;
+        }
+
+        .key {
+            height: 55px;
+            min-width: 32px;
+
+            padding: 0 8px;
+
+            border: none;
+            border-radius: 4px;
+
+            background-color: #d3d6da;
+
+            font-size: 14px;
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        .key:hover {
+            background-color: #bbb;
+        }
+
+        .wide {
+            min-width: 55px;
+        }
+
+
+        /* Keyboard colors */
+
+        .key.correct {
+            background-color: #6aaa64;
+            color: white;
+        }
+
+        .key.present {
+            background-color: #c9b458;
+            color: white;
+        }
+
+        .key.absent {
+            background-color: #787c7e;
+            color: white;
+        }
+
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 400px) {
+
+            .game {
+                width: 95%;
+            }
+
+            .tile {
+                width: 55px;
+                height: 55px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="game">
+
+        <h1>WORDLE</h1>
+
+        <div id="message"></div>
+
+        <div id="board"></div>
+
+        <div id="keyboard"></div>
+
+    </div>
+
+
+
+    <script>
+
+        // ==================================================
+        // THE PREDETERMINED WORD
+        // ==================================================
+        //
+        // CHANGE THIS WORD.
+        //
+        // It must be exactly 5 letters.
+        //
+
+        const ANSWER = "YOURS";
+
+
+        // ==================================================
+        // GAME VARIABLES
+        // ==================================================
+
+        let currentRow = 0;
+
+        let currentGuess = "";
+
+        let gameOver = false;
+
+
+
+        // ==================================================
+        // GET HTML ELEMENTS
+        // ==================================================
+
+        const board = document.getElementById("board");
+
+        const keyboard = document.getElementById("keyboard");
+
+        const message = document.getElementById("message");
+
+
+
+        // ==================================================
+        // CREATE THE 6 x 5 BOARD
+        // ==================================================
+
+        for (let rowNumber = 0; rowNumber < 6; rowNumber++) {
+
+            const row = document.createElement("div");
+
+            row.classList.add("row");
+
+
+            for (let tileNumber = 0; tileNumber < 5; tileNumber++) {
+
+                const tile = document.createElement("div");
+
+                tile.classList.add("tile");
+
+                row.appendChild(tile);
+
+            }
+
+
+            board.appendChild(row);
+
+        }
+
+
+
+        // ==================================================
+        // CREATE KEYBOARD
+        // ==================================================
+
+        const keyboardRows = [
+
+            ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+
+            ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+
+            ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "BACK"]
+
+        ];
+
+
+        for (let rowNumber = 0; rowNumber < keyboardRows.length; rowNumber++) {
+
+            const keyboardRow = document.createElement("div");
+
+            keyboardRow.classList.add("keyboard-row");
+
+
+            for (let keyNumber = 0; keyNumber < keyboardRows[rowNumber].length; keyNumber++) {
+
+                const letter = keyboardRows[rowNumber][keyNumber];
+
+                const button = document.createElement("button");
+
+                button.textContent = letter;
+
+                button.classList.add("key");
+
+
+                if (letter === "ENTER" || letter === "BACK") {
+
+                    button.classList.add("wide");
+
+                }
+
+
+                button.addEventListener("click", function() {
+
+                    handleKey(letter);
+
+                });
+
+
+                keyboardRow.appendChild(button);
+
+            }
+
+
+            keyboard.appendChild(keyboardRow);
+
+        }
+
+
+
+        // ==================================================
+        // COMPUTER KEYBOARD
+        // ==================================================
+
+        document.addEventListener("keydown", function(event) {
+
+            if (gameOver) {
+
+                return;
+
+            }
+
+
+            const key = event.key.toUpperCase();
+
+
+            if (key === "ENTER") {
+
+                handleKey("ENTER");
+
+            }
+
+            else if (key === "BACKSPACE") {
+
+                handleKey("BACK");
+
+            }
+
+            else if (/^[A-Z]$/.test(key)) {
+
+                handleKey(key);
+
+            }
+
+        });
+
+
+
+        // ==================================================
+        // HANDLE KEY
+        // ==================================================
+
+        function handleKey(key) {
+
+            if (gameOver) {
+
+                return;
+
+            }
+
+
+            // BACKSPACE
+
+            if (key === "BACK") {
+
+                currentGuess = currentGuess.slice(0, -1);
+
+                updateBoard();
+
+                return;
+
+            }
+
+
+            // ENTER
+
+            if (key === "ENTER") {
+
+                submitGuess();
+
+                return;
+
+            }
+
+
+            // LETTER
+
+            if (currentGuess.length < 5) {
+
+                currentGuess += key;
+
+                updateBoard();
+
+            }
+
+        }
+
+
+
+        // ==================================================
+        // PUT THE CURRENT GUESS ON THE BOARD
+        // ==================================================
+
+        function updateBoard() {
+
+            const row = board.children[currentRow];
+
+
+            for (let i = 0; i < 5; i++) {
+
+                row.children[i].textContent = currentGuess[i] || "";
+
+            }
+
+        }
+
+
+
+        // ==================================================
+        // SUBMIT GUESS
+        // ==================================================
+
+        function submitGuess() {
+
+            // Must have 5 letters
+
+            if (currentGuess.length !== 5) {
+
+                showMessage("Not enough letters");
+
+                return;
+
+            }
+
+
+            // Check the guess
+
+            checkGuess();
+
+        }
+
+
+
+        // ==================================================
+        // CHECK GUESS
+        // ==================================================
+
+        function checkGuess() {
+
+            const row = board.children[currentRow];
+
+
+            const answerLetters = ANSWER.split("");
+
+            const guessLetters = currentGuess.split("");
+
+
+            // Start every letter as gray
+
+            const result = [
+
+                "absent",
+
+                "absent",
+
+                "absent",
+
+                "absent",
+
+                "absent"
+
+            ];
+
+
+
+            // ==================================================
+            // FIRST PASS: GREEN
+            //
+            // Correct letter
+            // AND
+            // Correct position
+            // ==================================================
+
+            for (let i = 0; i < 5; i++) {
+
+                if (guessLetters[i] === answerLetters[i]) {
+
+                    result[i] = "correct";
+
+                    answerLetters[i] = null;
+
+                    guessLetters[i] = null;
+
+                }
+
+            }
+
+
+
+            // ==================================================
+            // SECOND PASS: YELLOW
+            //
+            // Correct letter
+            // BUT
+            // Wrong position
+            // ==================================================
+
+            for (let i = 0; i < 5; i++) {
+
+                if (guessLetters[i] === null) {
+
+                    continue;
+
+                }
+
+
+                const matchingPosition =
+                    answerLetters.indexOf(guessLetters[i]);
+
+
+                if (matchingPosition !== -1) {
+
+                    result[i] = "present";
+
+                    answerLetters[matchingPosition] = null;
+
+                }
+
+            }
+
+
+
+            // ==================================================
+            // APPLY COLORS TO THE ROW
+            // ==================================================
+
+            for (let i = 0; i < 5; i++) {
+
+                row.children[i].classList.add(result[i]);
+
+            }
+
+
+
+            // ==================================================
+            // UPDATE KEYBOARD
+            // ==================================================
+
+            updateKeyboard(result, row);
+
+
+
+            // ==================================================
+            // WIN
+            // ==================================================
+
+            if (currentGuess === ANSWER) {
+
+                showMessage("and you're mine :p \n Happy National BF's Day");
+
+                gameOver = true;
+
+                
+
+                return;
+
+            }
+
+
+
+            // ==================================================
+            // WRONG GUESS
+            //
+            // Keep the row!
+            //
+            // Move to the next row.
+            // ==================================================
+
+            currentRow++;
+
+            currentGuess = "";
+
+
+
+            // ==================================================
+            // LOSS
+            // ==================================================
+
+            if (currentRow >= 6) {
+
+                showMessage("The word was " + ANSWER + "loser.");
+
+                gameOver = true;
+
+                return;
+
+            }
+
+        }
+
+
+
+        // ==================================================
+        // UPDATE KEYBOARD COLORS
+        // ==================================================
+
+        function updateKeyboard(result, row) {
+
+            const keys = document.querySelectorAll(".key");
+
+
+            for (let i = 0; i < 5; i++) {
+
+                const letter = row.children[i].textContent;
+
+
+                for (let j = 0; j < keys.length; j++) {
+
+                    const key = keys[j];
+
+
+                    if (key.textContent !== letter) {
+
+                        continue;
+
+                    }
+
+
+
+                    // GREEN always wins
+
+                    if (result[i] === "correct") {
+
+                        key.classList.remove("present");
+
+                        key.classList.remove("absent");
+
+                        key.classList.add("correct");
+
+                    }
+
+
+
+                    // YELLOW only if it isn't already green
+
+                    else if (
+                        result[i] === "present" &&
+                        !key.classList.contains("correct")
+                    ) {
+
+                        key.classList.remove("absent");
+
+                        key.classList.add("present");
+
+                    }
+
+
+
+                    // GRAY only if it isn't already
+                    // green or yellow
+
+                    else if (
+                        result[i] === "absent" &&
+                        !key.classList.contains("correct") &&
+                        !key.classList.contains("present")
+                    ) {
+
+                        key.classList.add("absent");
+
+                    }
+
+                }
+
+            }
+
+        }
+
+
+
+        // ==================================================
+        // SHOW MESSAGE
+
+
+        function showMessage(text) {
+
+            message.textContent = text;
+
+        }
+
+    </script>
+
+</body>
+
+</html>
